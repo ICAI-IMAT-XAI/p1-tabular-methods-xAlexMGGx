@@ -1,4 +1,4 @@
-# test_shap_explainer.py
+# test_shap.py
 """
 Tests for ShapExplainer.
 
@@ -26,9 +26,14 @@ import shap
 # e.g., from mypackage.explainers import ShapExplainer
 import os
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.shapley_explainer import ShapleyExplainer  # <-- update if your module name differs
+sys.path.insert(
+    0, os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+)
+
+from src.shapley_explainer import (
+    ShapleyExplainer,
+)  # <-- update if your module name differs
 
 
 # ---------------------------------------------------------------------
@@ -56,7 +61,9 @@ def models(data):
     model_paths = {
         "linear": os.path.join(MODELS_DIR, "linear_model.joblib"),
         "random_forest": os.path.join(MODELS_DIR, "random_forest.joblib"),
-        "gradient_boosting": os.path.join(MODELS_DIR, "gradient_boosting.joblib"),
+        "gradient_boosting": os.path.join(
+            MODELS_DIR, "gradient_boosting.joblib"
+        ),
     }
 
     models = {}
@@ -71,9 +78,13 @@ def models(data):
             if key == "linear":
                 model = LinearRegression().fit(X_train, y_train)
             elif key == "random_forest":
-                model = RandomForestRegressor(random_state=42).fit(X_train, y_train)
+                model = RandomForestRegressor(random_state=42).fit(
+                    X_train, y_train
+                )
             elif key == "gradient_boosting":
-                model = GradientBoostingRegressor(random_state=42).fit(X_train, y_train)
+                model = GradientBoostingRegressor(random_state=42).fit(
+                    X_train, y_train
+                )
             else:
                 raise ValueError(f"Unknown model key: {key}")
 
@@ -89,7 +100,9 @@ def background_and_instances(data):
     X_train, X_test, _, _ = data
     rng = np.random.default_rng(42)
     bg_size = min(50, X_train.shape[0])
-    background_idx = rng.choice(np.arange(X_train.shape[0]), size=bg_size, replace=False)
+    background_idx = rng.choice(
+        np.arange(X_train.shape[0]), size=bg_size, replace=False
+    )
     X_background = X_train[background_idx]
     X_instances = X_test[:3]
     return X_background, X_instances
@@ -99,25 +112,33 @@ def background_and_instances(data):
 # Helper Functions
 # ---------------------------------------------------------------------
 
-def kernel_shap_values(model, X_background: np.ndarray, X_instances: np.ndarray) -> np.ndarray:
+
+def kernel_shap_values(
+    model, X_background: np.ndarray, X_instances: np.ndarray
+) -> np.ndarray:
     """Compute exact Kernel SHAP values (2^features) for small problems."""
     n_features = X_instances.shape[1]
     explainer = shap.KernelExplainer(model.predict, X_background)
-    values = explainer.shap_values(X_instances, nsamples=2 ** n_features)
+    values = explainer.shap_values(X_instances, nsamples=2**n_features)
     return np.asarray(values)
 
 
-def ours_shap_values(model, X_background: np.ndarray, X_instances: np.ndarray) -> np.ndarray:
+def ours_shap_values(
+    model, X_background: np.ndarray, X_instances: np.ndarray
+) -> np.ndarray:
     """Compute SHAP values using ShapleyExplainer."""
     explainer = ShapleyExplainer(model.predict, X_background)
-    return explainer.shap_values(X_instances)
+    return explainer.shapley_values(X_instances)
 
 
 # ---------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------
 
-@pytest.mark.parametrize("model_key", ["linear", "random_forest", "gradient_boosting"])
+
+@pytest.mark.parametrize(
+    "model_key", ["linear", "random_forest", "gradient_boosting"]
+)
 def test_matches_kernel_shap(models, background_and_instances, model_key):
     """ShapExplainer should approximately match shap.KernelExplainer."""
     model = models[model_key]
@@ -133,7 +154,9 @@ def test_matches_kernel_shap(models, background_and_instances, model_key):
     )
 
 
-@pytest.mark.parametrize("model_key", ["linear", "random_forest", "gradient_boosting"])
+@pytest.mark.parametrize(
+    "model_key", ["linear", "random_forest", "gradient_boosting"]
+)
 def test_additivity_property(models, background_and_instances, model_key):
     """Sum of SHAP values equals f(x) - E[f(X_background)]."""
     model = models[model_key]
